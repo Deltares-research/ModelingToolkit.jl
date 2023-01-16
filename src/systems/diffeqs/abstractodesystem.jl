@@ -198,7 +198,7 @@ function calculate_massmatrix(sys::AbstractODESystem; simplify = false, sparse =
     eqs = [eq for eq in equations(sys) if !isdifferenceeq(eq)]
     dvs = states(sys)
     neq = length(eqs)
-    M = sparse ? zeros(neq, neq) : spzeros(neq, neq)
+    M = sparse ? spzeros(neq, neq) : zeros(neq, neq)
     state2idx = Dict(s => i for (i, s) in enumerate(dvs))
     for (i, eq) in enumerate(eqs)
         if istree(eq.lhs) && operation(eq.lhs) isa Differential
