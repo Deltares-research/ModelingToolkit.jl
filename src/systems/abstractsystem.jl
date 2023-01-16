@@ -425,8 +425,9 @@ namespace_controls(sys::AbstractSystem) = controls(sys, controls(sys))
 
 function namespace_defaults(sys)
     defs = defaults(sys)
-    Dict((isparameter(k) ? parameters(sys, k) : states(sys, k)) => namespace_expr(v, sys)
-         for (k, v) in pairs(defs))
+    Dict{SymbolicUtils.BasicSymbolic{Real}, Union{Float64, Int64}}((isparameter(k) ? parameters(sys, k) : states(sys, k)) => namespace_expr(v,
+                                                                                                                                            sys)
+                                                                   for (k, v) in pairs(defs))
 end
 
 function namespace_equations(sys::AbstractSystem)
@@ -507,6 +508,7 @@ Base.@deprecate default_p(x) defaults(x) false
 function defaults(sys::AbstractSystem)
     systems = get_systems(sys)
     defs = get_defaults(sys)
+    defs = Dict{SymbolicUtils.BasicSymbolic{Real}, Union{Float64, Int64}}(defs)
     # `mapfoldr` is really important!!! We should prefer the base model for
     # defaults, because people write:
     #
