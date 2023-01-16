@@ -194,10 +194,11 @@ function generate_difference_cb(sys::ODESystem, dvs = states(sys), ps = paramete
     PeriodicCallback(cb_affect!, first(dt))
 end
 
-function calculate_massmatrix(sys::AbstractODESystem; simplify = false)
+function calculate_massmatrix(sys::AbstractODESystem; simplify = false, sparse = false)
     eqs = [eq for eq in equations(sys) if !isdifferenceeq(eq)]
     dvs = states(sys)
-    M = zeros(length(eqs), length(eqs))
+    neq = length(eqs)
+    M = sparse ? zeros(neq, neq) : spzeros(neq, neq)
     state2idx = Dict(s => i for (i, s) in enumerate(dvs))
     for (i, eq) in enumerate(eqs)
         if istree(eq.lhs) && operation(eq.lhs) isa Differential
@@ -322,10 +323,10 @@ function DiffEqBase.ODEFunction{iip, specialize}(sys::AbstractODESystem, dvs = s
         _jac = nothing
     end
 
-    M = calculate_massmatrix(sys)
+    M = calculate_massmatrix(sys; sparse)
 
     _M = if sparse && !(u0 === nothing || M === I)
-        SparseArrays.sparse(M)
+        M
     elseif u0 === nothing || M === I
         M
     else
@@ -541,10 +542,10 @@ function ODEFunctionExpr{iip}(sys::AbstractODESystem, dvs = states(sys),
         _jac = :($jacsym = nothing)
     end
 
-    M = calculate_massmatrix(sys)
+    M = calculate_massmatrix(sys; sparse)
 
     _M = if sparse && !(u0 === nothing || M === I)
-        SparseArrays.sparse(M)
+        M
     elseif u0 === nothing || M === I
         M
     else
