@@ -379,23 +379,27 @@ function expand_instream(csets::AbstractVector{<:ConnectionSet}, sys::AbstractSy
     end
 
     if !isempty(instream_exprs)
-        # map from the instream expression to the ConnectionSet
-        expr_cset = Dict{BasicSymbolic{Real}, ConnectionSet}()
+        # map from a namespaced stream variable to a ConnectionSet
+        expr_cset = Dict()
         for cset in csets
+            crep = first(cset.set)
+            current = namespace == crep.sys.namespace
             for v in cset.set
-                instream_expr = instream(namespaced_var(v))
-                expr_cset[instream_expr] = cset
+                if (current || !v.isouter)
+                    expr_cset[namespaced_var(v)] = cset.set
+                end
             end
         end
     end
     for ex in instream_exprs
-        if haskey(expr_cset, ex)
-            cset = expr_cset[ex]
+        ns_sv = only(arguments(ex))
+        full_name_sv = renamespace(namespace, ns_sv)
+        if haskey(expr_cset, full_name_sv)
+            cset = expr_cset[full_name_sv]
         else
-            ns_sv = only(arguments(ex))
             error("$ns_sv is not a variable inside stream connectors")
         end
-        cset, idx_in_set, sv = get_cset_sv(namespace, ex, cset)
+        idx_in_set, sv = get_cset_sv(full_name_sv, cset)
 
         n_inners = n_outers = 0
         for (i, e) in enumerate(cset)
@@ -521,15 +525,10 @@ function get_current_var(namespace, cele, sv)
     states(renamespace(unnamespace(namespace, cele.sys.namespace), cele.sys.sys), sv)
 end
 
-function get_cset_sv(namespace, ex, cset)
-    ns_sv = only(arguments(ex))
-    full_name_sv = renamespace(namespace, ns_sv)
-
-    crep = first(cset.set)
-    current = namespace == crep.sys.namespace
-    for (idx_in_set, v) in enumerate(cset.set)
-        if (current || !v.isouter) && isequal(namespaced_var(v), full_name_sv)
-            return cset.set, idx_in_set, v.v
+function get_cset_sv(full_name_sv, cset)
+    for (idx_in_set, v) in enumerate(cset)
+        if isequal(namespaced_var(v), full_name_sv)
+            return idx_in_set, v.v
         end
     end
     error("$ns_sv is not a variable inside stream connectors")
