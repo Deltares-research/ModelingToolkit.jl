@@ -430,6 +430,14 @@ function namespace_defaults(sys)
                                                                    for (k, v) in pairs(defs))
 end
 
+function namespace_defaults!(d, sys)
+    defs = defaults(sys)
+    for k in keys(defs)
+        d[isparameter(k) ? parameters(sys, k) : states(sys, k)] = namespace_expr(defs[k],
+                                                                                 sys)
+    end
+end
+
 function namespace_equations(sys::AbstractSystem)
     eqs = equations(sys)
     isempty(eqs) && return Equation[]
@@ -515,7 +523,16 @@ function defaults(sys::AbstractSystem)
     # `compose(ODESystem(...; defaults=defs), ...)`
     #
     # Thus, right associativity is required and crucial for correctness.
-    isempty(systems) ? defs : mapfoldr(namespace_defaults, merge, systems; init = defs)
+    # isempty(systems) ? defs : mapfoldr(namespace_defaults, merge, systems; init = defs)
+    if isempty(systems)
+        return defs
+    else
+        d = copy(defs)
+        for system in systems
+            namespace_defaults!(d, system)
+        end
+        return d
+    end
 end
 
 states(sys::AbstractSystem, v) = renamespace(sys, v)
